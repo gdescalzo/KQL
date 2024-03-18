@@ -1,0 +1,18 @@
+// Application Insights - out-of-memory exception
+
+This custom monitoring queries the table exception to check how many OutOfMemory exceptions were raised during a 15-minute period.
+
+app('{App Insights}').exceptions
+| where type has 'OutOfMemoryException'
+| summarize OOMExceptions = count() by bin(timestamp, 15m)
+| where OOMExceptions > 10
+| order by timestamp
+
+// Steps to Debug
+// - Go to the App Insights and check the exception trend
+
+exceptions
+| where type has "OutOfMemoryException"
+| summarize OOMExceptions = count() by bin(timestamp, 15m)
+| order by timestamp
+| render columnchart 
