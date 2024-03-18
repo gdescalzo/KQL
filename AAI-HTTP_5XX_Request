@@ -1,0 +1,17 @@
+// The objective of the following alert is to streamline the number of alerts deployed per region and per resource type. 
+// To achieve this, we have consolidated two alerts per region (US and GW), effectively monitoring all http5xx error requests SLI. 
+
+let APLICATION_INSIGHT_1 = app('AAI_Resource_Name').requests
+  | summarize Total = todouble(count()), Success = todouble(countif(toint(resultCode) < 500)) by bin(timestamp, 30m), cloud_RoleName
+  | extend SLI = Success / Total
+  | project timestamp, SLI, Total, Success, cloud_RoleName
+  | order by timestamp;
+let APLICATION_INSIGHT_2 = app('AAI_Resource_Name').requests
+  | where name != 'GET /Something' // This will filter some endpoint
+  | summarize Total = todouble(count()), Success = todouble(countif(toint(resultCode) < 500)) by bin(timestamp, 30m), cloud_RoleName
+  | extend SLI = Success / Total
+  | project timestamp, SLI, Total, Success, cloud_RoleName
+  | order by timestamp;
+APLICATION_INSIGHT_1
+  | union APLICATION_INSIGHT_2
+  | where SLI < 0.90
