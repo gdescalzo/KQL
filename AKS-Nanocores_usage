@@ -1,0 +1,41 @@
+// AKS - Nanocores usage
+
+// Monitoring description
+// - This custom monitoring queries both the KubePodInventory and Perf LAW Tablse and search the Counters of limit and usage of each resource (memory rss, memory working set, and nano cores) 
+// within Prod Namespace. If the value between usage/limit is greater than 90% on any POD the alert will be triggered.
+
+
+// Nano cores
+let Used = Perf
+| where ObjectName == 'K8SContainer' and CounterName == 'cpuUsageNanoCores'
+| extend PodUid = tostring(split(InstanceName, '/', 9)[0])
+| join kind=leftouter (KubePodInventory
+| where Namespace == 'pattern'                                    // <-- change this
+| distinct PodUid, Name) on PodUid
+| summarize arg_max(CounterValue, *), UsedP90 = percentile(CounterValue, 90) by PodUid
+| where isnotempty(Name)
+| project PodUid, Pod = Name, Used = CounterValue;
+let Limit = Perf
+| where ObjectName == 'K8SContainer' and CounterName == 'memoryLimitBytes'
+| extend PodUid = tostring(split(InstanceName, '/', 9)[0])
+| join kind=leftouter (KubePodInventory
+| where Namespace == 'prod' and isnotempty(Name)
+| distinct PodUid, Name) on PodUid
+| summarize arg_max(TimeGenerated, *) by PodUid
+| where isnotempty(Name)
+| project PodUid, Pod = Name, Limit = CounterValue;
+Used
+| join kind=inner Limit on PodUid
+| project Pod, Usage = Used / Limit
+| render columnchart
+| order by Usage
+| where Usage > 0.90
+
+// Steps to debug
+
+KubePodInventory
+| where Name == '{podname}'
+| extend LastStatus = todynamic(ContainerLastStatus)
+| extend ContainerExitState = tostring(LastStatus['lastState']), ContaienrExitReason = tostring(LastStatus['reason'])
+| project TimeGenerated, PodUid, Name, ContainerID, PodStatus, ContainerStatus, ContainerExitState, ContaienrExitReason
+| order by TimeGenerated
