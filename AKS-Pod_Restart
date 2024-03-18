@@ -1,0 +1,7 @@
+// AKS - Pod Restart
+
+// This monitoring queries the table KubePodInventory and search the container and pods restarts for the pods. If the value is greater than 0 then the alert will be triggered.
+
+KubePodInventory
+| where ServiceName has_any('some_pod', 'other_pod')
+| where ContainerRestartCount != 0 or PodRestartCount != 0
