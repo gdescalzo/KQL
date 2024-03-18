@@ -1,0 +1,24 @@
+// SQL Server - Database storage percent - consumption
+
+// Monitoring description
+// - This alert applies to all SQL servers within the customer's tenant. If any database within these servers reaches a storage consumption level of 90%
+
+AzureMetrics 
+| where ResourceProvider == 'MICROSOFT.SQL'
+| where MetricName == 'storage_percent'
+| where not (ResourceId contains 'ELASTICPOOLS') 
+| extend SQLserver = tostring(split(ResourceId,'/')[-3])
+| summarize countif(Average >= 90) by bin(TimeGenerated, 5m), MetricName, DataBase = Resource, SQLserver 
+| where countif_ > 4
+
+// Steps to Debug
+AzureMetrics
+| where TimeGenerated > ago(30m)
+| where ResourceProvider == 'MICROSOFT.SQL'
+| where MetricName has_any ('storage_percent')
+| where not (ResourceId  contains 'ELASTICPOOLS')
+| extend SQLserver = tostring(split(ResourceId,'/')[-3])
+| where Average > 90                                                       // <-- change this if is a Sev2 that you need to report.
+| where Resource == 'XXXXXXXXXXXXXX'                                      // <-- change this whit, the DB mentioned on the alert.
+| project TimeGenerated, SQLserver, Resource, MetricName, Average
+| order by TimeGenerated
