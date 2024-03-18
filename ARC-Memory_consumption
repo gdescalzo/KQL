@@ -1,0 +1,36 @@
+// Redis Cache - Memory consumption
+
+// This query will provide you the number of times the average memory consumption is less than 110 MB in each 5-minute window, 
+// filtering out the windows where this situation happened 5 times or less, for Sev1.
+
+// This query will provide you the number of times the average memory consumption is between 105 and 110 MB in each 5-minute window, 
+// filtering out the windows where this situation happened 5 times or less.
+
+// Sev1
+AzureMetrics 
+| where ResourceProvider == 'MICROSOFT.CACHE' 
+| where MetricName == 'usedmemory' 
+| project TimeGenerated, Resource, MetricName, AverageMemory_In_MB = Average / 1024 / 1024
+| summarize countif(AverageMemory_In_MB > 110) by bin(TimeGenerated, 5m), MetricName, Key_Vault = Resource 
+| where countif_ > 5
+| order by TimeGenerated desc
+
+// Sev2
+AzureMetrics 
+| where ResourceProvider == 'MICROSOFT.CACHE' 
+| where MetricName == 'usedmemory' 
+| project TimeGenerated, Resource, MetricName, AverageMemory_In_MB = Average / 1024 / 1024
+| summarize countif(AverageMemory_In_MB >= 105 and AverageMemory_In_MB <= 110) by bin(TimeGenerated, 5m), MetricName, Key_Vault = Resource 
+| where countif_ > 5
+| order by TimeGenerated desc
+
+// Steps to Debug
+
+AzureMetrics 
+| where TimeGenerated > ago(1h)
+| where ResourceProvider == 'MICROSOFT.CACHE' 
+| where MetricName == 'usedmemory' 
+| where Resource == 'XXXXXXXXXXXXXXX'                                  // <-- change this whit, the RC mentioned on the alert.
+| project TimeGenerated, Resource, MetricName, AverageMemory_In_MB = Average / 1024 / 1024
+| where AverageMemory_In_MB > 110                                      // <-- change this if is a Sev2 that you need to report.
+| order by TimeGenerated desc
