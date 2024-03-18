@@ -1,0 +1,33 @@
+// Storage Account - Availability
+
+// Monitoring description
+// - The scope of this alert is for all Storage Accounts (SA) on the customer tenant, the average of availability it´s bellow 80% will triggered a Sev1.
+// - The scope of this alert is for all Storage Accounts (SA) on the customer tenant, the average of availability it´s between 90 and 99% will triggered a Sev2.
+
+// Sev1
+AzureMetrics 
+| where ResourceProvider == 'MICROSOFT.STORAGE' 
+| where MetricName == 'Availability' 
+| where Resource != 'DEFAULT' 
+| summarize countif(Average < 80) by bin(TimeGenerated, 5m), MetricName, Storage_Account = Resource 
+| where countif_ > 4
+
+// Sev2
+AzureMetrics 
+| where ResourceProvider == 'MICROSOFT.STORAGE' 
+| where MetricName == 'Availability' 
+| where Resource != 'DEFAULT' 
+| summarize countif(Average >= 90 and Average <= 99) by bin(TimeGenerated, 5m), MetricName, Storage_Account = Resource 
+| where countif_ > 4
+
+// Steps to Debug
+
+AzureMetrics
+| where TimeGenerated > ago(90d)
+| where ResourceProvider == 'MICROSOFT.STORAGE' 
+| where MetricName == 'Availability' 
+| where Resource != 'DEFAULT' 
+| where Average < 80                                                       // <-- change this if is a Sev2 that you need to report.
+| where Resource == 'XXXXXXXXXXXXXX'                                       // <-- change this whit, the SA mentioned on the alert.
+| project TimeGenerated, Resource, MetricName, Average
+| order by TimeGenerated
