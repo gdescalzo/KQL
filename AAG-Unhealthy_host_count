@@ -1,0 +1,17 @@
+// Application Gateway - Unhealthy host count
+
+// This alert applies to all Applications Gateway within the customer's tenant. If any of the applications gateway reaches an unhealthy host count of 1 or more, it will trigger a Sev1 alert.
+
+AzureMetrics
+| where Resource contains 'PATTERN' and ResourceProvider == 'MICROSOFT.NETWORK' and MetricName == 'UnhealthyHostCount' // <-- you need to change the 'PATTERN'
+| summarize countif(Average != 0) by bin(TimeGenerated, 5m), MetricName, AppGateway = Resource
+| where countif_ > 5
+
+// Steps to Debug
+
+AzureMetrics 
+| where Resource contains 'PATTERN' and ResourceProvider == 'MICROSOFT.NETWORK' and MetricName == 'UnhealthyHostCount' // <-- you need to change the 'PATTERN'
+| where Average != 1
+| where Resource == 'Azure_Resource_Name'                                                                              // <-- change this whit the DB mentioned on the alert.
+| project TimeGenerated, Type, Resource, MetricName, Average
+| order by TimeGenerated
