@@ -15,3 +15,42 @@ let APLICATION_INSIGHT_2 = app('AAI_Resource_Name').requests
 APLICATION_INSIGHT_1
   | union APLICATION_INSIGHT_2
   | where SLI < 0.90
+
+// This alert triggers when there is a significant deviation in the success rate of crucial application requests. 
+// It monitors key API endpoints and calculates the Service Level Indicator (SLI) based on the number of successful requests (response code below 500) among the total requests. 
+// The alert activates when the SLI drops below 99% and there are more than four failed requests within a 15-minute window. 
+// This setup is designed to promptly notify the team about potential issues that could impact service availability or performance while minimizing false alarms triggered by a 
+// small number of failures.
+
+let endpoints = datatable (URL: string)
+[
+    '/api/endpoint_example',
+    '/api/endpoint_example',
+    '/api/endpoint_example',
+];
+ app('Azure_Application_Insight_resource_name').requests                             // <-- Change the this.
+  | where url has_any(endpoints) and not(name has_any('GET some_endpoint/to_filter', 'POST some_endpoint/to_filter')) 
+ | summarize Total = todouble(count()), Success = todouble(countif(toint(resultCode) < 500)), Failures = todouble(countif(toint(resultCode) >= 500)) by name, bin(timestamp, 15m), appName 
+ | extend SLI = Success / Total 
+ | order by timestamp 
+ | where SLI < 0.99 and Failures >= 4
+
+// Steps to debug
+
+let endpoints = datatable (URL: string)
+[
+    '/api/endpoint_example',
+    '/api/endpoint_example',
+    '/api/endpoint_example',
+];
+app('Azure_Application_Insight_resource_name').requests 
+| where timestamp > ago(90d)                                                                                    
+| where url has_any(endpoints) and not(name has_any('GET some_endpoint/to_filter', 'POST some_endpoint/to_filter')) 
+| summarize Total = todouble(count()), 
+    Success = todouble(countif(toint(resultCode) < 500)), 
+    Failures = todouble(countif(toint(resultCode) >= 500)) 
+    by bin(timestamp, 30m), cloud_RoleName, appName, name
+| extend SLI = round((Success / Total) * 100, 2)
+| project timestamp, SLI, Total, Success, Failures, cloud_RoleName, appName, name
+| order by timestamp
+| where SLI != 100 
