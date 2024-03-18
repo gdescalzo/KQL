@@ -1,0 +1,14 @@
+// AKS - Container states
+
+KubePodInventory
+    | where ClusterName has 'Azure_AKS_Resource_Name'          // <-- Change this
+    | where ContainerStatus == 'terminated'
+    | where ContainerStatusReason != 'Completed'
+    | project
+        TimeGenerated,
+        ClusterName,
+        Computer,
+        Namespace,
+        Name,
+        ContainerStatus,
+        ContainerStatusReason
