@@ -1,0 +1,32 @@
+// SQL Elastic pool - Storage consumption
+
+// This alert applies to all SQL Elastic pools within the customer's tenant. If any the Elastic pools within these servers reaches a CPU consumption level of 90%, 
+// it will trigger a Sev1 alert. If it reaches 80% storage capacity, it will prompt a Sev2 alert.
+
+// Sev1
+AzureMetrics 
+| where ResourceProvider == 'MICROSOFT.SQL' and ResourceId has 'elasticpools' 
+| extend Type = tostring(split(ResourceId, '/')[-2]), Server = tostring(split(ResourceId, '/')[-1]) 
+| where MetricName == 'cpu_percent' 
+| summarize countif(Average > 90) by bin(TimeGenerated, 5m), MetricName, Server 
+| where countif_ > 4
+
+// Sev2
+AzureMetrics 
+| where ResourceProvider == 'MICROSOFT.SQL' and ResourceId has 'elasticpools' 
+| extend Type = tostring(split(ResourceId, '/')[-2]), Server = tostring(split(ResourceId, '/')[-1]) 
+| where MetricName == 'cpu_percent' 
+| summarize countif(Average >= 80 and Average <= 90) by bin(TimeGenerated, 5m), MetricName, Server 
+| where countif_ > 4
+
+// Steps to Debug
+
+AzureMetrics 
+| where TimeGenerated > ago(1h)
+| where ResourceProvider == 'MICROSOFT.SQL' and ResourceId has 'elasticpools' 
+| extend Type = tostring(split(ResourceId, '/')[-2]), Server = tostring(split(ResourceId, '/')[-1]) 
+| where MetricName == 'cpu_percent' 
+| where Average > 90                                                        // <-- change this if is a Sev2 that you need to report.
+| where Resource == 'XXXXXXXXXXXXXXXX'                                      // <-- change this whit the DB mentioned on the alert.
+| project TimeGenerated, Type, Resource, MetricName, Average
+| order by TimeGenerated
