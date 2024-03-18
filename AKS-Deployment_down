@@ -1,0 +1,7 @@
+// AKS - Deployment down
+
+ InsightsMetrics
+ | where _ResourceId contains 'Azure_AKS_Resource_Name'               // <-- Change this
+ | where Name == 'kube_deployment_status_replicas_ready'
+ | where Val == 0
+ | distinct tostring(parse_json(Tags).deployment), Val
