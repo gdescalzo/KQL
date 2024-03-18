@@ -1,0 +1,27 @@
+// SQL Server - Database CPU-DTU consumption
+
+// Monitoring description
+// - The scope of this alert is for all SQL servers on the customer subscription.
+// - The alert checks the databases CPU or DTU consumption inside their resource groups.
+// - Then the alerts triggers if it's greater than 80% (severity 2) or if it's greater than 90% (severity 1).
+
+AzureMetrics
+| where ResourceProvider == 'MICROSOFT.SQL'
+| where MetricName has_any ('dtu_consumption_percent','cpu_percent')
+| where not (ResourceId  contains 'ELASTICPOOLS')
+| extend SQLserver = tostring(split(ResourceId,'/')[-3])
+| summarize countif(Average >= 90) by bin(TimeGenerated, 5m), MetricName, DataBase = Resource, SQLserver
+| where countif_ == 5 
+
+// Steps to Debug
+
+AzureMetrics
+| where TimeGenerated > ago(30m)
+| where ResourceProvider == 'MICROSOFT.SQL'
+| where MetricName has_any ('dtu_consumption_percent','cpu_percent')
+| where not (ResourceId  contains 'ELASTICPOOLS')
+| extend SQLserver = tostring(split(ResourceId,'/')[-3])
+| where Average > 90                                                       // <-- change this if is a Sev2 that you need to report.
+| where Resource == 'XXXXXXXXXXXXXXX'                                      // <-- change this whit, the DB mentioned on the alert.
+| project TimeGenerated, SQLserver, Resource, MetricName, Average
+| order by TimeGenerated
