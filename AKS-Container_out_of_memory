@@ -1,0 +1,7 @@
+// AKS - Container out of memory
+
+KubePodInventory
+| join ContainerLog on ContainerID
+| where ClusterName has 'Azure_AKS_Resource_Name'        // <-- Change this.
+| where LogEntry contains 'OutOfMemoryError'
+| project Name, LogEntry
