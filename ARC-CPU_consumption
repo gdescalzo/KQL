@@ -1,0 +1,32 @@
+// Redis Cache CPU Consumption
+
+// Sev1 Alert
+// The scope of this query is for all Redis Cache on the customer tenant, that the databases inside of them if reach out the CPU consumption. to the value of 90% will triggered a Sev1.
+
+AzureMetrics 
+| where TimeGenerated > ago(1h)
+| where ResourceProvider == 'MICROSOFT.CACHE' 
+| where MetricName == 'percentProcessorTime' 
+| summarize countif(Average >= 90) by bin(TimeGenerated, 5m), MetricName, RedisCache = Resource 
+| where countif_ == 5
+
+// Sev2 Alert
+// For those Redis Cache that the database consumptions reach out to 80% will triggered a Sev2 alert.
+
+AzureMetrics 
+| where TimeGenerated > ago(1h)
+| where ResourceProvider == 'MICROSOFT.CACHE' 
+| where MetricName == 'percentProcessorTime' 
+| summarize countif(Average >= 80 and Average <= 90) by bin(TimeGenerated, 5m), MetricName, RedisCache = Resource 
+| where countif_ == 5
+
+// The debug steps are the same for the Sev1 and Sev2
+
+AzureMetrics 
+| where TimeGenerated > ago(1h)
+| where ResourceProvider == 'MICROSOFT.CACHE' 
+| where MetricName == 'percentProcessorTime' 
+| where Average > 2                                                    // <-- change this if is a Sev2 that you need to report.
+| where Resource == 'Azure Resource Name'                              // <-- change this whit, the RC mentioned on the alert.
+| project TimeGenerated, Resource, MetricName, Average
+| order by TimeGenerated
