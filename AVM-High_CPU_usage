@@ -1,0 +1,10 @@
+// Azure VM - High CPU usage
+
+Perf
+| where Computer matches regex '^AzureVM_Name[1|2]'
+| where ObjectName == 'Processor'
+    and CounterName == '% Processor Time'
+    and InstanceName == '_Total'
+| summarize avg(CounterValue) by Computer, CounterName
+| where avg_CounterValue >= 80
+| project Computer, CounterName, avg_CounterValue
