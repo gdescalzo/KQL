@@ -1,0 +1,14 @@
+// AKS - Pod Crash Loop Back Off
+
+// Monitoring description
+// - This custom monitoring queries KubePodInventory LAW Table and search for logs of PODs whithin Prod Namespace. 
+// - If there is any POD in "waiting" status, with Containers in "CrashLoopBackOff" status, alert will be triggered.
+
+
+KubePodInventory
+| where ClusterId has 'Azure_AKS_Resource_Name'                    // <-- change this
+| where Namespace has 'pattern'                                    // <-- change this
+| extend ContainerLastState = tostring(parse_json(ContainerLastStatus).lastState) 
+| extend ContainerLastStateReason = tostring(parse_json(ContainerLastStatus).reason) 
+| project TimeGenerated, Computer, ClusterId, Namespace,ControllerName, PodUid, PodName=Name, PodRestartCount, ContainerID,ContainerStatus, ContainerStatusReason, ContainerLastState, ContainerLastStateReason
+| where ContainerStatus == 'waiting' and ContainerStatusReason has 'CrashLoopBackOff'
