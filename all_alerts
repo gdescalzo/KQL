@@ -1,0 +1,11 @@
+
+// The arg('') permit to query any resource in an any azure suscription, the below KQL query permit to obtain all alerts list based on a pathern
+
+arg('').Resources
+| where subscriptionId in ($SuscriptionId)
+| where name startswith '$pathern'
+| where tags == ''
+| where type != 'microsoft.insights/actiongroups'
+| extend jsonProperties = parse_json(properties)
+| project AlertName = name, Type = type, Enabled = tostring(jsonProperties.enabled), Location = location, ResourceGroup = resourceGroup, Description = coalesce(jsonProperties.description, 'N/A'), Severity = tostring(jsonProperties.severity), WindowSize = tostring(jsonProperties.windowSize)
+| sort by Severity asc
